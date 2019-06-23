@@ -1,39 +1,30 @@
-#include <Servo.h> 
-#include <SoftwareSerial.h>
-SoftwareSerial jevoisSerial(8, 9); // RX, TX
+#include <Servo.h>
 
 Servo trapdoorServo;
 
-void setup() 
-{ 
+void setup()
+{
   trapdoorServo.attach(A0);
-  trapdoorServo.write(0);  // set servo to mid-point
+  // set servo to mid-point
+  trapdoorServo.write(0);
 
-  // Use normal serial for debugging
   Serial.begin(9600);
   while (!Serial) {
     ; // wait for serial port to connect. Needed for native USB port only
   }
+}
 
-//  Serial.println("Main serial ready");
-
-  jevoisSerial.begin(9600);
-} 
-
-
-// Buffer for received serial port bytes:
 #define MAX_LINE_LENGTH 128
+#define START_INDEX_OF_JEVOIS_LABEL 3
+#define THRESHOLD_PROBABILITY_OF_MATCH 80
+#define SERVO_ANGLE_TO_OPEN_TRAPDOOR 90
 char lineFromJevois[MAX_LINE_LENGTH + 1];
 
 void loop() {
    if (Serial.available()) {
-//      trapdoorServo.write(0);
-//      delay(100);
-//      trapdoorServo.write(100);
-//      delay(100);
       byte len = Serial.readBytesUntil('\n', lineFromJevois, MAX_LINE_LENGTH);
       lineFromJevois[len] = 0;
-      
+
       if (lineFromJevois[0] == 'N' && lineFromJevois[1] == 'O') {
         String strLineFromJevois = String(lineFromJevois);
         int colonIndex = 0;
@@ -42,22 +33,15 @@ void loop() {
             colonIndex = strLineFromJevois[i];
           }
         }
-          //Assign the number to be the characters after the colon to the end of the string
-          String lastDigits = "";
-          if (strLineFromJevois.substring(colonIndex) == "100") {
-            lastDigits = "100";
-          }
+        //Assign the number to be the characters after the colon to the end of the string
+        String lastDigits = strLineFromJevois.substring(colonIndex);
 
-          else {
-            lastDigits = strLineFromJevois.substring(len - 3);
-          }
-        
-        String label = strLineFromJevois.substring(3, len - 4);
+        String label = strLineFromJevois.substring(START_INDEX_OF_JEVOIS_LABEL, colonIndex);
 
-        if (lastDigits.toInt() > 80 && label == "bottle") {
+        if (lastDigits.toInt() > THRESHOLD_PROBABILITY_OF_MATCH && label == "bottle") {
            // wait 1 second before opening trapdoor
            delay(1000);
-           trapdoorServo.write(90);
+           trapdoorServo.write(SERVO_ANGLE_TO_OPEN_TRAPDOOR);
            // leave trapdoor open for 5 seconds
            delay(5000);
         } else {
@@ -69,4 +53,4 @@ void loop() {
    } else {
       trapdoorServo.write(0);
    }
-} 
+}
